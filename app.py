@@ -9,15 +9,18 @@ import seaborn as sns
 app = Flask(__name__)
 
 # Safe model loading
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+
 try:
-    model = joblib.load("demand_model.pkl")
-    scaler = joblib.load("demand_scaler.pkl")
-    label_encoder = joblib.load("demand_label_encoder.pkl")
+    model = joblib.load(os.path.join(BASE_DIR, "demand_model.pkl"))
+    scaler = joblib.load(os.path.join(BASE_DIR, "demand_scaler.pkl"))
+    label_encoder = joblib.load(os.path.join(BASE_DIR, "demand_label_encoder.pkl"))
 except Exception as e:
     print("Model loading failed:", e)
     model = None
     scaler = None
     label_encoder = None
+
 
 @app.route('/ml/demand', methods=['GET','POST'])
 def predict_demand():
