@@ -1,35 +1,42 @@
-from flask import Flask, jsonify
-import joblib
+from flask import Flask, request, jsonify
+import json
 import pandas as pd
 import numpy as np
+import joblib
+import matplotlib.pyplot as plt
 import seaborn as sns
-import matplotlib
-matplotlib.use('Agg')   # Use non-GUI backend for server
-import matplotlib.pyplot as plt
-import matplotlib.pyplot as plt
-import json
 
 app = Flask(__name__)
-from flask import send_file
-from flask import request
 
-@app.route('/ml/chart/<filename>', methods=['GET'])
-def get_chart(filename):
-    return send_file(filename, mimetype='image/png')
-# Load model artifacts
-model = joblib.load("demand_model.pkl")
-scaler = joblib.load("demand_scaler.pkl")
-label_encoder = joblib.load("demand_label_encoder.pkl")
+# Safe model loading
+try:
+    model = joblib.load("demand_model.pkl")
+    scaler = joblib.load("demand_scaler.pkl")
+    label_encoder = joblib.load("demand_label_encoder.pkl")
+except Exception as e:
+    print("Model loading failed:", e)
+    model = None
+    scaler = None
+    label_encoder = None
 
-@app.route('/ml/demand', methods=['GET'])
-def test_with_file():
-    # Load backend temp JSON file
-    with open("response.json") as f:
-        data = json.load(f)
+@app.route('/ml/demand', methods=['GET','POST'])
+def predict_demand():
+    # Accept POST (live backend JSON) or fallback GET (local response.json)
+    if request.method == 'POST':
+        data = request.get_json()
+    else:
+        try:
+            with open("response.json") as f:
+                data = json.load(f)
+        except FileNotFoundError:
+            return jsonify({"error": "response.json not found on server"})
 
-    # Extract ML features from nested "mlFeatures"
+    # If models failed to load, return error instead of crashing
+    if not model or not scaler or not label_encoder:
+        return jsonify({"error": "Model not loaded"})
+
+    # Extract ML features
     ml_features = data["mlFeatures"]
-
     sample = pd.DataFrame([[ml_features['trend_score'],
                             ml_features['competition_score'],
                             ml_features['price_range']]],
@@ -42,30 +49,28 @@ def test_with_file():
     proba = model.predict_proba(sample_scaled)
     confidence = np.max(proba)
 
-    # Chart generation (all Module 1 features)
-    df = pd.DataFrame([ml_features])  # chart from mlFeatures block
+    # Chart generation
+    df = pd.DataFrame([ml_features])
     plt.figure(figsize=(8,5))
-    sns.barplot(data=df)
+    sns.barplot(x=list(df.columns), y=list(df.iloc[0]))
     plt.title("Module 1 Feature Scores")
     chart_path = "module1_chart.png"
     plt.savefig(chart_path)
     plt.close()
 
-    # Merge backend input + ML output + chart reference
+    # Response back
     response = data.copy()
     response.update({
         "demand_label": pred_label[0],
         "confidence": round(float(confidence), 2),
-        "chart": request.host_url + "ml/chart/" + chart_path
-
+        "chart_url": request.host_url + "ml/chart/" + chart_path
     })
 
     return jsonify(response)
 
-import os
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))   # Railway/Render sets PORT automatically
-    app.run(host="0.0.0.0", port=port)         # Listen on all interfaces
+@app.route('/ml/chart/<path:filename>')
+def serve_chart(filename):
+    return app.send_static_file(filename)        # Listen on all interfaces
 # from flask import Flask, request, jsonify
 # import joblib
 # import pandas as pd
