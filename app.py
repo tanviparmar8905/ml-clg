@@ -69,7 +69,11 @@ def predict_demand():
         "chart_url": request.host_url + "ml/chart/" + chart_path
     })
 
-    return jsonify(response)
+    return app.response_class(
+        response=json.dumps(response, indent=4),
+        status=200,
+        mimetype="application/json"
+    )
 
 @app.route('/ml/chart/<path:filename>')
 def serve_chart(filename):
