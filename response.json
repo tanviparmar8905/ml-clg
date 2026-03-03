@@ -1,0 +1,13 @@
+{
+  "detailedAnalysis" : "Analysis for niche: Eco-friendly water bottles. Selected marketplace (SHOPIFY) has specific requirements. Niche shows strong trending indicators. With medium risk tolerance, this is a promising opportunity worth pursuing.",
+  "evaluationMode" : "RULE_BASED",
+  "mlFeatures" : {
+    "trend_score" : 73,
+    "competition_score" : 45,
+    "price_range" : 10,
+    "risk_score" : 50
+  },
+  "recommendation" : "GO - Strong viability! This product idea shows good potential. Proceed with detailed planning and supplier research.",
+  "riskFlag" : "LOW",
+  "viabilityScore" : 88.0
+}
